@@ -1,7 +1,12 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 
+from .db import test_db_connection
 from .routes import router as api_router
+
+
+load_dotenv()
 
 
 app = FastAPI(
@@ -23,3 +28,12 @@ app.include_router(api_router)
 @app.get("/")
 def root() -> dict:
     return {"message": "Mock GIS API for Kota Padang is running"}
+
+
+@app.get("/api/v1/db/ping")
+def db_ping() -> dict:
+    try:
+        payload = test_db_connection()
+        return {"status": "success", "data": payload}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Database connection failed: {exc}")
