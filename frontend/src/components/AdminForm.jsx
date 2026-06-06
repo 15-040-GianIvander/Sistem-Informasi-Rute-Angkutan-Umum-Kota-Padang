@@ -56,7 +56,7 @@ export default function AdminForm() {
           </p>
           <h2 className="mt-2 text-2xl font-semibold text-white">Tambah Transit Stop</h2>
           <p className="mt-2 text-sm leading-6 text-slate-300">
-            Form ini mengirim mock payload ke FastAPI untuk simulasi input admin pada tahap prototyping.
+            Form ini menyimpan data halte baru langsung ke database melalui API backend.
           </p>
         </div>
 

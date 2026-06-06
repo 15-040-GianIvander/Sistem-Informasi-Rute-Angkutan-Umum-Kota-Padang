@@ -87,7 +87,7 @@ export default function MapComponent() {
           Kota Padang WebGIS Prototype
         </p>
         <h1 className="mt-1 text-xl font-semibold text-white">Rute dan Halte Angkutan Umum</h1>
-        <p className="mt-1 text-sm text-slate-300">Data di bawah ini masih mock GeoJSON dari backend FastAPI lokal.</p>
+        <p className="mt-1 text-sm text-slate-300">Data dimuat langsung dari database PostGIS melalui backend FastAPI lokal.</p>
         <div className="mt-3 flex items-center gap-2">
           <button
             onClick={() => setModa('all')}
