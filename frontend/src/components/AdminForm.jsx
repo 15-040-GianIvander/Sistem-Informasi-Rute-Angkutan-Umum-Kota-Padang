@@ -1,147 +1,73 @@
 import { useState } from 'react';
 import axios from 'axios';
 
-const initialFormState = {
-  nama_halte: '',
-  latitude: '',
-  longitude: '',
-  fasilitas: '',
-};
+export default function AdminForm({ onStopAdded }) {
+  const [formData, setFormData] = useState({
+    stop_name: '',
+    route_id: 1, // Default sementara
+    latitude: '',
+    longitude: '',
+    is_transit: false
+  });
+  const [status, setStatus] = useState('');
 
-const API_BASE_URL = 'http://localhost:8000';
-
-export default function AdminForm() {
-  const [formData, setFormData] = useState(initialFormState);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-    setFormData((currentForm) => ({
-      ...currentForm,
-      [name]: value,
-    }));
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData({
+      ...formData,
+      [name]: type === 'checkbox' ? checked : value
+    });
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    setIsSubmitting(true);
-
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setStatus('Menyimpan...');
     try {
-      const payload = {
-        nama_halte: formData.nama_halte.trim(),
-        latitude: Number.parseFloat(formData.latitude),
-        longitude: Number.parseFloat(formData.longitude),
-        fasilitas: formData.fasilitas.trim(),
-      };
-
-      const response = await axios.post(`${API_BASE_URL}/api/v1/stops`, payload);
-
-      alert(`Berhasil: ${response.data.status}`);
-      setFormData(initialFormState);
-    } catch (submitError) {
-      alert('Gagal menyimpan halte baru. Periksa input dan koneksi backend.');
-    } finally {
-      setIsSubmitting(false);
+      // Pastikan endpoint backend ini sesuai dengan schema Pydantic-mu
+      await axios.post('http://localhost:8000/api/v1/stops', formData);
+      setStatus('Berhasil menambahkan halte!');
+      setFormData({ stop_name: '', route_id: 1, latitude: '', longitude: '', is_transit: false });
+      
+      // Panggil fungsi callback agar peta di-refresh otomatis
+      if (onStopAdded) onStopAdded();
+      
+      setTimeout(() => setStatus(''), 3000);
+    } catch (error) {
+      setStatus('Gagal menyimpan: ' + (error.response?.data?.detail || error.message));
     }
   };
 
   return (
-    <aside className="relative flex min-h-screen flex-col justify-between border-b border-white/10 bg-slate-950/95 px-6 py-8 text-slate-100 shadow-2xl lg:border-b-0 lg:border-r lg:border-white/10">
-      <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-emerald-500/20 to-transparent" />
-
-      <div className="relative z-10 space-y-6">
+    <div className="bg-slate-900 border border-slate-700 p-4 rounded-xl shadow-lg max-w-sm w-full text-slate-200">
+      <h2 className="text-lg font-bold text-white mb-4">Tambah Halte Baru (Admin)</h2>
+      <form onSubmit={handleSubmit} className="space-y-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.32em] text-emerald-300">
-            Admin Panel
-          </p>
-          <h2 className="mt-2 text-2xl font-semibold text-white">Tambah Transit Stop</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-300">
-            Form ini menyimpan data halte baru langsung ke database melalui API backend.
-          </p>
+          <label className="block text-xs font-semibold mb-1">Nama Halte</label>
+          <input required type="text" name="stop_name" value={formData.stop_name} onChange={handleChange} 
+                 className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md focus:outline-none focus:border-emerald-500" />
         </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur">
-          <div className="space-y-2">
-            <label htmlFor="nama_halte" className="text-sm font-medium text-slate-200">
-              Nama Halte
-            </label>
-            <input
-              id="nama_halte"
-              name="nama_halte"
-              type="text"
-              value={formData.nama_halte}
-              onChange={handleChange}
-              className="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-emerald-400"
-              placeholder="Contoh: Halte Kampus UNP"
-              required
-            />
+        <div className="flex gap-2">
+          <div className="w-1/2">
+            <label className="block text-xs font-semibold mb-1">Latitude</label>
+            <input required type="number" step="any" name="latitude" value={formData.latitude} onChange={handleChange} 
+                   className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md" />
           </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-1">
-            <div className="space-y-2">
-              <label htmlFor="latitude" className="text-sm font-medium text-slate-200">
-                Latitude
-              </label>
-              <input
-                id="latitude"
-                name="latitude"
-                type="text"
-                inputMode="decimal"
-                value={formData.latitude}
-                onChange={handleChange}
-                className="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-emerald-400"
-                placeholder="-0.9471"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="longitude" className="text-sm font-medium text-slate-200">
-                Longitude
-              </label>
-              <input
-                id="longitude"
-                name="longitude"
-                type="text"
-                inputMode="decimal"
-                value={formData.longitude}
-                onChange={handleChange}
-                className="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-emerald-400"
-                placeholder="100.4172"
-                required
-              />
-            </div>
+          <div className="w-1/2">
+            <label className="block text-xs font-semibold mb-1">Longitude</label>
+            <input required type="number" step="any" name="longitude" value={formData.longitude} onChange={handleChange} 
+                   className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md" />
           </div>
-
-          <div className="space-y-2">
-            <label htmlFor="fasilitas" className="text-sm font-medium text-slate-200">
-              Fasilitas
-            </label>
-            <input
-              id="fasilitas"
-              name="fasilitas"
-              type="text"
-              value={formData.fasilitas}
-              onChange={handleChange}
-              className="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-emerald-400"
-              placeholder="Shelter, kursi tunggu, papan informasi"
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full rounded-2xl bg-emerald-500 px-4 py-3 font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isSubmitting ? 'Menyimpan...' : 'Simpan Halte'}
-          </button>
-        </form>
-      </div>
-
-      <div className="relative z-10 mt-8 rounded-3xl border border-white/10 bg-gradient-to-br from-emerald-500/10 to-sky-500/10 p-5 text-sm text-slate-300">
-        Backend target: <span className="font-semibold text-slate-100">http://localhost:8000</span>
-      </div>
-    </aside>
+        </div>
+        <div className="flex items-center gap-2 mt-2">
+          <input type="checkbox" name="is_transit" id="is_transit" checked={formData.is_transit} onChange={handleChange} 
+                 className="w-4 h-4 accent-emerald-500" />
+          <label htmlFor="is_transit" className="text-sm">Halte Transit / Stasiun?</label>
+        </div>
+        <button type="submit" className="w-full mt-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-4 rounded-md transition">
+          Simpan Data
+        </button>
+        {status && <p className="text-xs text-center mt-2 font-semibold text-sky-400">{status}</p>}
+      </form>
+    </div>
   );
 }

@@ -12,6 +12,7 @@ export default function MapComponent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [moda, setModa] = useState('all');
+  const [radius, setRadius] = useState(800);
 
   useEffect(() => {
     let isMounted = true;
@@ -66,7 +67,7 @@ export default function MapComponent() {
         const lon = pos.coords.longitude;
         try {
           const resp = await axios.get(
-            `${API_BASE_URL}/api/v1/stops/nearby?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&radius=800`
+            `${API_BASE_URL}/api/v1/stops/nearby?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&radius=${radius}`
           );
           setNearbyStops(resp.data.features || []);
         } catch (err) {
@@ -110,6 +111,18 @@ export default function MapComponent() {
           <button onClick={findNearby} className="ml-2 rounded-full bg-sky-500 px-3 py-1 text-sm font-semibold text-white">
             Temukan Halte Terdekat
           </button>
+        </div>
+        <div className="mt-3 flex items-center gap-3">
+          <label className="text-sm font-medium text-slate-300 w-24">Radius: {radius} m</label>
+          <input 
+            type="range" 
+            min="200" 
+            max="5000" 
+            step="100" 
+            value={radius} 
+            onChange={(e) => setRadius(e.target.value)}
+            className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-sky-500"
+          />
         </div>
       </div>
 
