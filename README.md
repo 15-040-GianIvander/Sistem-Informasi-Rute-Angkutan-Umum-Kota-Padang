@@ -1,5 +1,6 @@
 Sistem Informasi Rute Angkutan Umum Kota Padang
 Kelompok 8
+Proyek ini dibuat untuk Tugas Besar Sistem Informasi Semester 6.
 
 Anggota:
 - Muhammad Dzaky (123140039)
