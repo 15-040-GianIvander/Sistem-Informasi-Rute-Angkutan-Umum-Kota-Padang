@@ -1,9 +1,18 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { GeoJSON, MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
+import { GeoJSON, MapContainer, Marker, Popup, TileLayer, Circle, useMap } from 'react-leaflet';
 
 const PADANG_CENTER = [-0.9471, 100.4172];
 const API_BASE_URL = 'http://localhost:8000';
+
+// Komponen helper untuk melakukan auto-zoom ke lokasi pengguna
+function MapUpdater({ center }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center) map.setView(center, 15);
+  }, [center, map]);
+  return null;
+}
 
 export default function MapComponent() {
   const [routesGeoJson, setRoutesGeoJson] = useState(null);
@@ -13,6 +22,8 @@ export default function MapComponent() {
   const [error, setError] = useState('');
   const [moda, setModa] = useState('all');
   const [radius, setRadius] = useState(800);
+  const [userLocation, setUserLocation] = useState(null);
+  const [isLocating, setIsLocating] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -61,10 +72,13 @@ export default function MapComponent() {
       return;
     }
 
+    setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const lat = pos.coords.latitude;
         const lon = pos.coords.longitude;
+        setUserLocation([lat, lon]);
+        
         try {
           const resp = await axios.get(
             `${API_BASE_URL}/api/v1/stops/nearby?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&radius=${radius}`
@@ -72,10 +86,13 @@ export default function MapComponent() {
           setNearbyStops(resp.data.features || []);
         } catch (err) {
           alert('Gagal memanggil endpoint nearby.');
+        } finally {
+          setIsLocating(false);
         }
       },
       (err) => {
         alert('Gagal mendapatkan lokasi: ' + err.message);
+        setIsLocating(false);
       },
       { enableHighAccuracy: true, maximumAge: 30000 }
     );
@@ -108,8 +125,12 @@ export default function MapComponent() {
           >
             Kereta
           </button>
-          <button onClick={findNearby} className="ml-2 rounded-full bg-sky-500 px-3 py-1 text-sm font-semibold text-white">
-            Temukan Halte Terdekat
+          <button 
+            onClick={findNearby} 
+            disabled={isLocating}
+            className="ml-2 rounded-full bg-sky-500 hover:bg-sky-400 px-3 py-1 text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            {isLocating ? 'Mencari...' : 'Temukan Halte Terdekat'}
           </button>
         </div>
         <div className="mt-3 flex items-center gap-3">
@@ -131,6 +152,9 @@ export default function MapComponent() {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        
+        {/* Helper untuk auto-center peta ketika lokasi pengguna ditemukan */}
+        {userLocation && <MapUpdater center={userLocation} />}
 
         {!loading && routesGeoJson ? <GeoJSON data={routesGeoJson} style={routeStyle} /> : null}
 
@@ -150,6 +174,22 @@ export default function MapComponent() {
               );
             })
           : null}
+
+        {/* User location marker dan radius */}
+        {userLocation && (
+          <>
+            <Marker position={userLocation}>
+              <Popup>
+                <div className="text-sm font-semibold text-slate-900">Lokasi Anda</div>
+              </Popup>
+            </Marker>
+            <Circle 
+              center={userLocation} 
+              radius={radius} 
+              pathOptions={{ color: '#0ea5e9', fillColor: '#0ea5e9', fillOpacity: 0.15, weight: 2 }} 
+            />
+          </>
+        )}
 
         {/* Nearby results (highlighted) */}
         {nearbyStops && nearbyStops.length > 0

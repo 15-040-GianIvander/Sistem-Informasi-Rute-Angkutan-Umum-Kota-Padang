@@ -273,11 +273,11 @@ Contoh GeoJSON Route:
 
 ## 9. Next Steps
 
-- [ ] Implement POST endpoint untuk create stop dengan database insertion
-- [ ] Tambahan: Update stop (PUT endpoint)
-- [ ] Tambahan: Delete stop (DELETE endpoint)
+- [x] Implement POST endpoint untuk create stop dengan database insertion
+- [x] Tambahan: Update stop (PUT endpoint)
+- [x] Tambahan: Delete stop (DELETE endpoint)
 - [ ] Tambahan: Create route (POST endpoint)
 - [ ] Testing: Setup automated tests untuk database queries
 - [ ] Documentation: API documentation dengan Swagger (sudah built-in di FastAPI)
 
-Database sudah fully integrated! 🎉
+Database sudah fully integrated dan CRUD Halte sudah beroperasi! 🎉

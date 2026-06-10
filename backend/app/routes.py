@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 
-from .schemas import TransitStopCreate
-from .db import get_routes_geojson, get_stops_geojson, get_stops_nearby, get_routes_filtered, insert_stop
+from .schemas import TransitStopCreate, TransitStopUpdate
+from .db import get_routes_geojson, get_stops_geojson, get_stops_nearby, get_routes_filtered, insert_stop, update_stop, delete_stop
 
 
 router = APIRouter()
@@ -35,18 +35,50 @@ def create_stop(payload: TransitStopCreate) -> dict:
     """
     Create a new transit stop and persist to database.
     """
-    data = payload.model_dump() if hasattr(payload, "model_dump") else payload.dict()
-
     try:
-        nama = data.get("nama_halte")
-        lat = float(data.get("latitude"))
-        lon = float(data.get("longitude"))
-        fasilitas = data.get("fasilitas")
-
-        feature = insert_stop(nama, lat, lon, fasilitas=fasilitas)
+        feature = insert_stop(
+            nama_halte=payload.stop_name,
+            latitude=payload.latitude,
+            longitude=payload.longitude,
+            is_transit=payload.is_transit,
+            route_id=payload.route_id
+        )
         return {"status": "success", "data": feature}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to insert stop: {exc}")
+
+
+@router.put("/api/v1/stops/{stop_id}")
+def update_stop_endpoint(stop_id: int, payload: TransitStopUpdate) -> dict:
+    try:
+        success = update_stop(
+            stop_id=stop_id,
+            stop_name=payload.stop_name,
+            route_id=payload.route_id,
+            is_transit=payload.is_transit,
+            lat=payload.latitude,
+            lon=payload.longitude
+        )
+        if not success:
+            raise HTTPException(status_code=404, detail="Halte tidak ditemukan")
+        return {"status": "success", "message": f"Halte dengan ID {stop_id} berhasil diperbarui"}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to update stop: {exc}")
+
+
+@router.delete("/api/v1/stops/{stop_id}")
+def delete_stop_endpoint(stop_id: int) -> dict:
+    try:
+        success = delete_stop(stop_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Halte tidak ditemukan")
+        return {"status": "success", "message": f"Halte dengan ID {stop_id} berhasil dihapus"}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to delete stop: {exc}")
 
 
 @router.get("/api/v1/stops/nearby")

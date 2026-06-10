@@ -197,9 +197,9 @@ fetch(`http://localhost:8000/api/v1/stops/nearby?lat=${lat}&lon=${lon}&radius=${
 - [x] Restore scripts created (Python, Batch, PowerShell)
 - [x] Environment configuration template (.env.example)
 - [x] Documentation created
-- [ ] TODO: POST endpoint untuk create stop dengan database insertion
-- [ ] TODO: PUT endpoint untuk update stop
-- [ ] TODO: DELETE endpoint untuk delete stop
+- [x] POST endpoint untuk create stop dengan database insertion
+- [x] PUT endpoint untuk update stop
+- [x] DELETE endpoint untuk delete stop
 
 ### 📞 File Structure
 

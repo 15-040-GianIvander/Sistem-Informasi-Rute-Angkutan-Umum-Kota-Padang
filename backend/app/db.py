@@ -262,3 +262,35 @@ def insert_stop(nama_halte: str, latitude: float, longitude: float, fasilitas: s
         },
         "geometry": geom,
     }
+
+def update_stop(stop_id: int, stop_name: str, route_id: int | None, is_transit: bool, lat: float, lon: float) -> bool:
+    """
+    Update data halte berdasarkan ID.
+    """
+    with get_db_connection() as connection:
+        with connection.cursor() as cursor:
+            query = """
+                UPDATE stops
+                SET stop_name = %s,
+                    route_id = %s,
+                    is_transit = %s,
+                    geom = ST_SetSRID(ST_MakePoint(%s, %s), 4326)
+                WHERE id = %s
+                RETURNING id;
+            """
+            cursor.execute(query, (stop_name, route_id, is_transit, lon, lat, stop_id))
+            updated = cursor.fetchone()
+        connection.commit()
+        return updated is not None
+
+def delete_stop(stop_id: int) -> bool:
+    """
+    Hapus halte berdasarkan ID.
+    """
+    with get_db_connection() as connection:
+        with connection.cursor() as cursor:
+            query = "DELETE FROM stops WHERE id = %s RETURNING id;"
+            cursor.execute(query, (stop_id,))
+            deleted = cursor.fetchone()
+        connection.commit()
+        return deleted is not None
