@@ -99,42 +99,57 @@ export default function MapComponent() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-slate-950">
-      <div className="absolute left-6 top-6 z-[500] max-w-md rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 shadow-glow backdrop-blur">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-300">
-          Kota Padang WebGIS Prototype
-        </p>
-        <h1 className="mt-1 text-xl font-semibold text-white">Rute dan Halte Angkutan Umum</h1>
-        <p className="mt-1 text-sm text-slate-300">Data dimuat langsung dari database PostGIS melalui backend FastAPI lokal.</p>
-        <div className="mt-3 flex items-center gap-2">
-          <button
-            onClick={() => setModa('all')}
-            className={`rounded-full px-3 py-1 text-sm font-semibold ${moda === 'all' ? 'bg-emerald-500 text-white' : 'bg-white/5 text-slate-200'}`}
-          >
-            Semua
-          </button>
-          <button
-            onClick={() => setModa('bus')}
-            className={`rounded-full px-3 py-1 text-sm font-semibold ${moda === 'bus' ? 'bg-emerald-500 text-white' : 'bg-white/5 text-slate-200'}`}
-          >
-            Bus
-          </button>
-          <button
-            onClick={() => setModa('train')}
-            className={`rounded-full px-3 py-1 text-sm font-semibold ${moda === 'train' ? 'bg-emerald-500 text-white' : 'bg-white/5 text-slate-200'}`}
-          >
-            Kereta
-          </button>
-          <button 
-            onClick={findNearby} 
-            disabled={isLocating}
-            className="ml-2 rounded-full bg-sky-500 hover:bg-sky-400 px-3 py-1 text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed transition"
-          >
-            {isLocating ? 'Mencari...' : 'Temukan Halte Terdekat'}
-          </button>
+    <main className="relative min-h-screen overflow-hidden bg-slate-950 font-sans">
+      {/* Top Right Admin Button */}
+      <a href="/admin" className="absolute top-4 right-4 md:top-8 md:right-8 z-[1000] flex items-center gap-2 rounded-2xl bg-slate-900/80 hover:bg-slate-800 border border-white/10 px-5 py-3 text-sm font-bold text-white shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:shadow-[0_0_20px_rgba(52,211,153,0.3)] active:scale-95 group">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+        Panel Admin
+      </a>
+
+      {/* Floating Control Panel */}
+      <div className="absolute left-4 top-4 md:left-8 md:top-8 z-[500] w-full max-w-[380px] rounded-[2rem] border border-white/10 bg-slate-900/60 p-6 shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] backdrop-blur-2xl backdrop-saturate-150 transition-all duration-500 hover:shadow-[0_8px_40px_0_rgba(16,185,129,0.15)] hover:bg-slate-900/70 group">
+        
+        {/* Header Area */}
+        <div className="mb-6 flex items-start gap-4">
+          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-lg shadow-emerald-500/30 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg>
+          </div>
+          <div>
+            <div className="mb-1 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-emerald-400 border border-emerald-500/20">
+              <span className="relative flex h-1.5 w-1.5 items-center justify-center">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+              </span>
+              Live PostGIS
+            </div>
+            <h1 className="bg-gradient-to-r from-white to-slate-400 bg-clip-text text-2xl font-black tracking-tight text-transparent">Padang Route</h1>
+            <p className="text-xs font-medium text-slate-400 mt-0.5">Sistem Navigasi Transportasi</p>
+          </div>
         </div>
-        <div className="mt-3 flex items-center gap-3">
-          <label className="text-sm font-medium text-slate-300 w-24">Radius: {radius} m</label>
+
+        {/* Moda Filter - Segmented Control */}
+        <div className="mb-6 flex rounded-2xl bg-slate-950/80 p-1.5 border border-white/5 shadow-inner">
+          {['all', 'bus', 'train'].map((type) => (
+            <button
+              key={type}
+              onClick={() => setModa(type)}
+              className={`flex-1 rounded-xl py-2 text-xs font-bold transition-all duration-300 hover:scale-[1.03] active:scale-95 ${
+                moda === type 
+                  ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 text-white shadow-lg shadow-emerald-500/25' 
+                  : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+              }`}
+            >
+              {type === 'all' ? 'Semua' : type === 'bus' ? 'Bus BRT' : 'Kereta'}
+            </button>
+          ))}
+        </div>
+
+        {/* Nearby Search Section */}
+        <div className="space-y-4 rounded-2xl bg-slate-800/30 p-5 border border-white/5">
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Jangkauan Area</label>
+            <span className="rounded-lg bg-sky-500/10 px-2 py-1 text-xs font-bold text-sky-400 ring-1 ring-inset ring-sky-500/20">{radius} meter</span>
+          </div>
           <input 
             type="range" 
             min="200" 
@@ -142,8 +157,25 @@ export default function MapComponent() {
             step="100" 
             value={radius} 
             onChange={(e) => setRadius(e.target.value)}
-            className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-sky-500"
+            className="w-full h-2 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/50 shadow-inner transition-transform hover:scale-[1.02]"
           />
+          <button 
+            onClick={findNearby} 
+            disabled={isLocating}
+            className="w-full mt-2 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_25px_rgba(14,165,233,0.5)] active:scale-95"
+          >
+            {isLocating ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                Mencari Lokasi...
+              </>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:scale-110"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
+                Temukan Terdekat
+              </>
+            )}
+          </button>
         </div>
       </div>
 
@@ -165,9 +197,12 @@ export default function MapComponent() {
               return (
                 <Marker key={feature.properties.id} position={[latitude, longitude]}>
                   <Popup>
-                    <div className="space-y-1">
-                      <div className="text-sm font-semibold text-slate-900">{feature.properties.nama_halte}</div>
-                      <div className="text-sm text-slate-700">{feature.properties.fasilitas}</div>
+                    <div className="font-sans">
+                      <div className="mb-1 text-xs font-bold uppercase tracking-wider text-emerald-600">
+                        {feature.properties.is_transit ? 'Stasiun / Transit' : 'Halte Biasa'}
+                      </div>
+                      <div className="text-base font-bold text-slate-800 leading-tight mb-1">{feature.properties.nama_halte}</div>
+                      <div className="text-sm text-slate-500 flex items-center gap-1">✅ {feature.properties.fasilitas}</div>
                     </div>
                   </Popup>
                 </Marker>
@@ -180,7 +215,7 @@ export default function MapComponent() {
           <>
             <Marker position={userLocation}>
               <Popup>
-                <div className="text-sm font-semibold text-slate-900">Lokasi Anda</div>
+                <div className="text-sm font-bold text-sky-600">📍 Lokasi Anda Saat Ini</div>
               </Popup>
             </Marker>
             <Circle 
@@ -198,10 +233,12 @@ export default function MapComponent() {
               return (
                 <Marker key={`near-${feature.id}`} position={[lat, lon]}>
                   <Popup>
-                    <div className="space-y-1">
-                      <div className="text-sm font-semibold text-slate-900">{feature.properties.nama_halte}</div>
-                      <div className="text-sm text-slate-700">{feature.properties.fasilitas}</div>
-                      <div className="text-xs text-slate-500">Jarak: {feature.properties.distance_m} m</div>
+                    <div className="font-sans">
+                       <div className="mb-1 inline-flex items-center rounded-md bg-sky-50 px-2 py-1 text-xs font-medium text-sky-700 ring-1 ring-inset ring-sky-600/20">
+                        Berjarak {feature.properties.distance_m} m
+                      </div>
+                      <div className="text-base font-bold text-slate-800 leading-tight mb-1 mt-2">{feature.properties.nama_halte}</div>
+                      <div className="text-sm text-slate-500 flex items-center gap-1">✅ {feature.properties.fasilitas}</div>
                     </div>
                   </Popup>
                 </Marker>
@@ -211,16 +248,20 @@ export default function MapComponent() {
       </MapContainer>
 
       {loading ? (
-        <div className="pointer-events-none absolute inset-0 z-[600] flex items-center justify-center bg-slate-950/35">
-          <div className="rounded-full border border-white/15 bg-slate-950/80 px-4 py-2 text-sm text-slate-100 shadow-glow backdrop-blur">
-            Memuat GeoJSON mock data...
+        <div className="pointer-events-none absolute inset-0 z-[600] flex items-center justify-center bg-slate-950/60 backdrop-blur-md transition-all duration-500">
+          <div className="flex flex-col items-center gap-4 rounded-3xl border border-white/10 bg-slate-900/80 p-8 shadow-2xl shadow-black/50 backdrop-blur-xl">
+            <div className="relative flex h-12 w-12 items-center justify-center">
+              <div className="absolute h-full w-full animate-ping rounded-full bg-emerald-500/20"></div>
+              <svg className="animate-spin h-8 w-8 text-emerald-500" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            </div>
+            <span className="text-sm font-bold tracking-widest uppercase text-emerald-400">Sinkronisasi Peta...</span>
           </div>
         </div>
       ) : null}
 
       {error ? (
-        <div className="absolute bottom-6 left-6 z-[600] rounded-2xl border border-rose-400/30 bg-rose-950/90 px-4 py-3 text-sm text-rose-100 shadow-glow backdrop-blur">
-          {error}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[600] rounded-2xl border border-rose-500/30 bg-rose-950/90 px-6 py-3 text-sm font-medium text-rose-200 shadow-2xl shadow-rose-900/20 backdrop-blur">
+          ⚠️ {error}
         </div>
       ) : null}
     </main>
