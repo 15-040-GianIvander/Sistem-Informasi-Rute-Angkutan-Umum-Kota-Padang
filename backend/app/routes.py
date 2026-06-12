@@ -20,12 +20,14 @@ def fetch_routes_geojson() -> dict:
 
 
 @router.get("/api/v1/stops/geojson")
-def fetch_stops_geojson() -> dict:
+def fetch_stops_geojson(
+    route_id: Optional[int] = Query(None, ge=1, description="Filter by corridor/route id")
+) -> dict:
     """
-    Fetch all stops from database as GeoJSON.
+    Fetch all stops from database as GeoJSON FeatureCollection.
     """
     try:
-        return get_stops_geojson()
+        return get_stops_geojson(route_id)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to fetch stops: {str(exc)}")
 
@@ -85,27 +87,29 @@ def delete_stop_endpoint(stop_id: int) -> dict:
 def fetch_stops_nearby(
     lat: float = Query(..., description="Latitude of center point"),
     lon: float = Query(..., description="Longitude of center point"),
-    radius: float = Query(500.0, ge=0, description="Radius in meters")
+    radius: float = Query(500.0, ge=0, description="Radius in meters"),
+    route_id: Optional[int] = Query(None, ge=1, description="Filter by corridor/route id")
 ) -> dict:
     """
     Return FeatureCollection of stops within specified radius (meters) of given lat/lon.
     Coordinates in GeoJSON remain [longitude, latitude].
     """
     try:
-        return get_stops_nearby(lat, lon, radius)
+        return get_stops_nearby(lat, lon, radius, route_id)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to fetch nearby stops: {str(exc)}")
 
 
 @router.get("/api/v1/routes/filter")
 def fetch_routes_filter(
-    moda: Optional[str] = Query("all", description="Filter by moda: bus, train, or all")
+    moda: Optional[str] = Query("all", description="Filter by moda: bus, train, or all"),
+    route_id: Optional[int] = Query(None, ge=1, description="Filter by corridor/route id")
 ) -> dict:
     """
     Filter routes by transport mode (moda).
     Expected `moda` values: 'bus', 'train', or 'all'.
     """
     try:
-        return get_routes_filtered(moda or "all")
+        return get_routes_filtered(moda or "all", route_id)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to filter routes: {str(exc)}")

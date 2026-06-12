@@ -21,6 +21,7 @@ export default function MapComponent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [moda, setModa] = useState('all');
+  const [selectedCorridor, setSelectedCorridor] = useState('all');
   const [radius, setRadius] = useState(800);
   const [userLocation, setUserLocation] = useState(null);
   const [isLocating, setIsLocating] = useState(false);
@@ -31,9 +32,23 @@ export default function MapComponent() {
     const loadData = async () => {
       try {
         setLoading(true);
+        setError('');
+        setNearbyStops([]);
+
+        const params = new URLSearchParams();
+        params.set('moda', moda);
+        if (selectedCorridor !== 'all') {
+          params.set('route_id', selectedCorridor);
+        }
+
+        const stopsParams = new URLSearchParams();
+        if (selectedCorridor !== 'all') {
+          stopsParams.set('route_id', selectedCorridor);
+        }
+
         const [routesResponse, stopsResponse] = await Promise.all([
-          axios.get(`${API_BASE_URL}/api/v1/routes/filter?moda=${encodeURIComponent(moda)}`),
-          axios.get(`${API_BASE_URL}/api/v1/stops/geojson`),
+          axios.get(`${API_BASE_URL}/api/v1/routes/filter?${params.toString()}`),
+          axios.get(`${API_BASE_URL}/api/v1/stops/geojson?${stopsParams.toString()}`),
         ]);
 
         if (!isMounted) {
@@ -58,7 +73,7 @@ export default function MapComponent() {
     return () => {
       isMounted = false;
     };
-  }, [moda]);
+  }, [moda, selectedCorridor]);
 
   const routeStyle = (feature) => ({
     color: feature?.properties?.color_code || '#2563eb',
@@ -80,8 +95,17 @@ export default function MapComponent() {
         setUserLocation([lat, lon]);
         
         try {
+          const params = new URLSearchParams({
+            lat: String(lat),
+            lon: String(lon),
+            radius: String(radius),
+          });
+          if (selectedCorridor !== 'all') {
+            params.set('route_id', selectedCorridor);
+          }
+
           const resp = await axios.get(
-            `${API_BASE_URL}/api/v1/stops/nearby?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&radius=${radius}`
+            `${API_BASE_URL}/api/v1/stops/nearby?${params.toString()}`
           );
           setNearbyStops(resp.data.features || []);
         } catch (err) {
@@ -142,6 +166,36 @@ export default function MapComponent() {
               {type === 'all' ? 'Semua' : type === 'bus' ? 'Bus BRT' : 'Kereta'}
             </button>
           ))}
+        </div>
+
+        {/* Corridor Filter */}
+        <div className="mb-6 space-y-3 rounded-2xl bg-slate-800/30 p-4 border border-white/5">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Filter Koridor</label>
+            <span className="rounded-lg bg-emerald-500/10 px-2 py-1 text-[11px] font-bold text-emerald-400 ring-1 ring-inset ring-emerald-500/20">
+              {selectedCorridor === 'all' ? 'Semua Koridor' : `Koridor ${selectedCorridor}`}
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-3">
+            {['all', 1, 2, 3, 4, 5, 6].map((corridor) => {
+              const isActive = selectedCorridor === corridor;
+              const label = corridor === 'all' ? 'Semua' : `K${corridor}`;
+
+              return (
+                <button
+                  key={String(corridor)}
+                  onClick={() => setSelectedCorridor(corridor)}
+                  className={`rounded-xl px-3 py-2 text-xs font-bold transition-all duration-300 hover:scale-[1.03] active:scale-95 ${
+                    isActive
+                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-orange-500/25'
+                      : 'bg-slate-950/80 text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Nearby Search Section */}

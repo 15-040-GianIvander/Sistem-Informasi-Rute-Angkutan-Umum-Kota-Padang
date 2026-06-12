@@ -78,22 +78,41 @@ def get_routes_geojson() -> dict:
     }
 
 
-def get_stops_geojson() -> dict:
+def get_stops_geojson(route_id: int | None = None) -> dict:
     """
-    Fetch all stops from database and return as GeoJSON FeatureCollection.
+    Fetch stops from database and return as GeoJSON FeatureCollection.
     """
     with get_db_connection() as connection:
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            query = """
-                SELECT 
-                    s.id,
-                    s.stop_name,
-                    s.is_transit,
-                    ST_AsGeoJSON(s.geom) as geometry_json
-                FROM stops s
-                ORDER BY s.id
-            """
-            cursor.execute(query)
+            if route_id is None:
+                query = """
+                    SELECT 
+                        s.id,
+                        s.route_id,
+                        s.stop_name,
+                        s.is_transit,
+                        r.route_name,
+                        ST_AsGeoJSON(s.geom) as geometry_json
+                    FROM stops s
+                    LEFT JOIN routes r ON s.route_id = r.id
+                    ORDER BY s.id
+                """
+                cursor.execute(query)
+            else:
+                query = """
+                    SELECT 
+                        s.id,
+                        s.route_id,
+                        s.stop_name,
+                        s.is_transit,
+                        r.route_name,
+                        ST_AsGeoJSON(s.geom) as geometry_json
+                    FROM stops s
+                    LEFT JOIN routes r ON s.route_id = r.id
+                    WHERE s.route_id = %s
+                    ORDER BY s.id
+                """
+                cursor.execute(query, (route_id,))
             stops = cursor.fetchall()
 
     features = []
@@ -104,6 +123,8 @@ def get_stops_geojson() -> dict:
             "id": f"stop-{stop['id']}",
             "properties": {
                 "id": stop['id'],
+                "route_id": stop['route_id'],
+                "route_name": stop['route_name'],
                 "nama_halte": stop['stop_name'],
                 "is_transit": stop['is_transit'],
                 "fasilitas": "Tersedia",  # Default value since DB doesn't have this column
@@ -118,32 +139,60 @@ def get_stops_geojson() -> dict:
     }
 
 
-def get_stops_nearby(lat: float, lon: float, radius: float = 500.0) -> dict:
+def get_stops_nearby(lat: float, lon: float, radius: float = 500.0, route_id: int | None = None) -> dict:
     """
     Fetch stops within specified radius (in meters) from given lat/lon.
     Returns as GeoJSON FeatureCollection with distance_m property.
     """
     with get_db_connection() as connection:
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            query = """
-                SELECT 
-                    s.id,
-                    s.stop_name,
-                    s.is_transit,
-                    ST_AsGeoJSON(s.geom) as geometry_json,
-                    ST_Distance(
+            if route_id is None:
+                query = """
+                    SELECT 
+                        s.id,
+                        s.route_id,
+                        s.stop_name,
+                        s.is_transit,
+                        r.route_name,
+                        ST_AsGeoJSON(s.geom) as geometry_json,
+                        ST_Distance(
+                            s.geom,
+                            ST_GeomFromText('POINT(%s %s)', 4326)
+                        ) * 111000 as distance_m
+                    FROM stops s
+                    LEFT JOIN routes r ON s.route_id = r.id
+                    WHERE ST_DWithin(
                         s.geom,
-                        ST_GeomFromText('POINT(%s %s)', 4326)
-                    ) * 111000 as distance_m
-                FROM stops s
-                WHERE ST_DWithin(
-                    s.geom,
-                    ST_GeomFromText('POINT(%s %s)', 4326),
-                    %s / 111000
-                )
-                ORDER BY distance_m
-            """
-            cursor.execute(query, (lon, lat, lon, lat, radius))
+                        ST_GeomFromText('POINT(%s %s)', 4326),
+                        %s / 111000
+                    )
+                    ORDER BY distance_m
+                """
+                cursor.execute(query, (lon, lat, lon, lat, radius))
+            else:
+                query = """
+                    SELECT 
+                        s.id,
+                        s.route_id,
+                        s.stop_name,
+                        s.is_transit,
+                        r.route_name,
+                        ST_AsGeoJSON(s.geom) as geometry_json,
+                        ST_Distance(
+                            s.geom,
+                            ST_GeomFromText('POINT(%s %s)', 4326)
+                        ) * 111000 as distance_m
+                    FROM stops s
+                    LEFT JOIN routes r ON s.route_id = r.id
+                    WHERE s.route_id = %s
+                      AND ST_DWithin(
+                        s.geom,
+                        ST_GeomFromText('POINT(%s %s)', 4326),
+                        %s / 111000
+                    )
+                    ORDER BY distance_m
+                """
+                cursor.execute(query, (route_id, lon, lat, lon, lat, radius))
             stops = cursor.fetchall()
 
     features = []
@@ -154,6 +203,8 @@ def get_stops_nearby(lat: float, lon: float, radius: float = 500.0) -> dict:
             "id": f"stop-{stop['id']}",
             "properties": {
                 "id": stop['id'],
+                "route_id": stop['route_id'],
+                "route_name": stop['route_name'],
                 "nama_halte": stop['stop_name'],
                 "is_transit": stop['is_transit'],
                 "distance_m": round(float(stop['distance_m']), 1),
@@ -169,14 +220,28 @@ def get_stops_nearby(lat: float, lon: float, radius: float = 500.0) -> dict:
     }
 
 
-def get_routes_filtered(moda: str = "all") -> dict:
+def get_routes_filtered(moda: str = "all", route_id: int | None = None) -> dict:
     """
     Fetch routes filtered by moda (transport mode).
     moda can be: "all", "bus", "train", or specific mode_id
     """
     with get_db_connection() as connection:
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            if moda.lower() in ("all", ""):
+            if route_id is not None:
+                query = """
+                    SELECT 
+                        r.id,
+                        r.route_name,
+                        r.color_code,
+                        tm.mode_name,
+                        ST_AsGeoJSON(r.geom) as geometry_json
+                    FROM routes r
+                    LEFT JOIN transport_modes tm ON r.mode_id = tm.id
+                    WHERE r.id = %s
+                    ORDER BY r.id
+                """
+                cursor.execute(query, (route_id,))
+            elif moda.lower() in ("all", ""):
                 query = """
                     SELECT 
                         r.id,
