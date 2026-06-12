@@ -3,8 +3,6 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 -- PostgreSQL database dump
 --
 
-\restrict vLYmrmtSeNY4N0Picb3PvD9C1agfJ5223agA9rjgffxiOjL3MueVTAslFoUtFF9
-
 -- Dumped from database version 18.1
 -- Dumped by pg_dump version 18.1
 
@@ -22,18 +20,11 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
-DROP DATABASE IF EXISTS "SIG_DB_PDG";
 --
 -- TOC entry 5959 (class 1262 OID 22006)
 -- Name: SIG_DB_PDG; Type: DATABASE; Schema: -; Owner: -
 --
 
-CREATE DATABASE "SIG_DB_PDG" WITH TEMPLATE = template0 ENCODING = 'UTF8' LOCALE_PROVIDER = libc LOCALE = 'English_Indonesia.1252';
-
-
-\unrestrict vLYmrmtSeNY4N0Picb3PvD9C1agfJ5223agA9rjgffxiOjL3MueVTAslFoUtFF9
-\connect "SIG_DB_PDG"
-\restrict vLYmrmtSeNY4N0Picb3PvD9C1agfJ5223agA9rjgffxiOjL3MueVTAslFoUtFF9
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -647,6 +638,3 @@ ALTER TABLE ONLY public.stops
 --
 -- PostgreSQL database dump complete
 --
-
-\unrestrict vLYmrmtSeNY4N0Picb3PvD9C1agfJ5223agA9rjgffxiOjL3MueVTAslFoUtFF9
-

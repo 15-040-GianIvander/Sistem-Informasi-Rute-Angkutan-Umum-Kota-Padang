@@ -33,7 +33,7 @@ end
 # Unset irrelevant variables.
 deactivate nondestructive
 
-set -gx VIRTUAL_ENV 'D:\S7\SIG\TUBES\Sistem-Informasi-Rute-Angkutan-Umum-Kota-Padang\backend\venv'
+set -gx VIRTUAL_ENV 'C:\Users\ACER\Desktop\python\task1\SIG\Sistem-Informasi-Rute-Angkutan-Umum-Kota-Padang\backend\venv'
 
 set -gx _OLD_VIRTUAL_PATH $PATH
 set -gx PATH "$VIRTUAL_ENV/"Scripts $PATH
