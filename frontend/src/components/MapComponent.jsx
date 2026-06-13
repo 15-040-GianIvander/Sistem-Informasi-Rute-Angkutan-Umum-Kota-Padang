@@ -21,10 +21,19 @@ export default function MapComponent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [moda, setModa] = useState('all');
+  
+  // State untuk menghandle sub-rute kereta
+  const [selectedTrainRoute, setSelectedTrainRoute] = useState('all_train'); 
   const [selectedCorridor, setSelectedCorridor] = useState('all');
   const [radius, setRadius] = useState(800);
   const [userLocation, setUserLocation] = useState(null);
   const [isLocating, setIsLocating] = useState(false);
+
+  // Reset filter rute/koridor setiap kali user pindah moda utama
+  useEffect(() => {
+    setSelectedCorridor('all');
+    setSelectedTrainRoute('all_train');
+  }, [moda]);
 
   useEffect(() => {
     let isMounted = true;
@@ -37,13 +46,24 @@ export default function MapComponent() {
 
         const params = new URLSearchParams();
         params.set('moda', moda);
-        if (selectedCorridor !== 'all') {
+
+        // Logic parameter filtering ke backend FastAPI
+        if (moda === 'bus' && selectedCorridor !== 'all') {
           params.set('route_id', selectedCorridor);
+        } else if (moda === 'train' && selectedTrainRoute !== 'all_train') {
+          params.set('route_id', selectedTrainRoute);
+        } else if (moda === 'all' && selectedTrainRoute !== 'all_train') {
+          // Jika menu 'Semua' aktif tapi rute kereta disaring spesifik
+          params.set('route_id', selectedTrainRoute);
         }
 
         const stopsParams = new URLSearchParams();
-        if (selectedCorridor !== 'all') {
+        if (moda === 'bus' && selectedCorridor !== 'all') {
           stopsParams.set('route_id', selectedCorridor);
+        } else if (moda === 'train' && selectedTrainRoute !== 'all_train') {
+          stopsParams.set('route_id', selectedTrainRoute);
+        } else if (moda === 'all' && selectedTrainRoute !== 'all_train') {
+          stopsParams.set('route_id', selectedTrainRoute);
         }
 
         const [routesResponse, stopsResponse] = await Promise.all([
@@ -51,9 +71,7 @@ export default function MapComponent() {
           axios.get(`${API_BASE_URL}/api/v1/stops/geojson?${stopsParams.toString()}`),
         ]);
 
-        if (!isMounted) {
-          return;
-        }
+        if (!isMounted) return;
 
         setRoutesGeoJson(routesResponse.data);
         setStopsGeoJson(stopsResponse.data);
@@ -73,7 +91,7 @@ export default function MapComponent() {
     return () => {
       isMounted = false;
     };
-  }, [moda, selectedCorridor]);
+  }, [moda, selectedCorridor, selectedTrainRoute]);
 
   const routeStyle = (feature) => ({
     color: feature?.properties?.color_code || '#2563eb',
@@ -100,8 +118,13 @@ export default function MapComponent() {
             lon: String(lon),
             radius: String(radius),
           });
-          if (selectedCorridor !== 'all') {
+          
+          if (moda === 'bus' && selectedCorridor !== 'all') {
             params.set('route_id', selectedCorridor);
+          } else if (moda === 'train' && selectedTrainRoute !== 'all_train') {
+            params.set('route_id', selectedTrainRoute);
+          } else if (moda === 'all' && selectedTrainRoute !== 'all_train') {
+            params.set('route_id', selectedTrainRoute);
           }
 
           const resp = await axios.get(
@@ -168,35 +191,80 @@ export default function MapComponent() {
           ))}
         </div>
 
-        {/* Corridor Filter */}
-        <div className="mb-6 space-y-3 rounded-2xl bg-slate-800/30 p-4 border border-white/5">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Filter Koridor</label>
-            <span className="rounded-lg bg-emerald-500/10 px-2 py-1 text-[11px] font-bold text-emerald-400 ring-1 ring-inset ring-emerald-500/20">
-              {selectedCorridor === 'all' ? 'Semua Koridor' : `Koridor ${selectedCorridor}`}
-            </span>
-          </div>
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-3">
-            {['all', 1, 2, 3, 4, 5, 6].map((corridor) => {
-              const isActive = selectedCorridor === corridor;
-              const label = corridor === 'all' ? 'Semua' : `K${corridor}`;
+        {/* Dinamis Filter Bus: Muncul kalau pilih 'all' atau 'bus' */}
+        {(moda === 'all' || moda === 'bus') && (
+          <div className="mb-6 space-y-3 rounded-2xl bg-slate-800/30 p-4 border border-white/5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Filter Koridor Bus</label>
+              <span className="rounded-lg bg-emerald-500/10 px-2 py-1 text-[11px] font-bold text-emerald-400 ring-1 ring-inset ring-emerald-500/20">
+                {selectedCorridor === 'all' ? 'Semua Koridor' : `Koridor ${selectedCorridor}`}
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-3">
+              {['all', 1, 2, 3, 4, 5, 6].map((corridor) => {
+                const isActive = selectedCorridor === corridor;
+                const label = corridor === 'all' ? 'Semua' : `K${corridor}`;
 
-              return (
-                <button
-                  key={String(corridor)}
-                  onClick={() => setSelectedCorridor(corridor)}
-                  className={`rounded-xl px-3 py-2 text-xs font-bold transition-all duration-300 hover:scale-[1.03] active:scale-95 ${
-                    isActive
-                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-orange-500/25'
-                      : 'bg-slate-950/80 text-slate-400 hover:bg-white/5 hover:text-slate-200'
-                  }`}
-                >
-                  {label}
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={String(corridor)}
+                    onClick={() => {
+                      setSelectedCorridor(corridor);
+                      // Jika user memfilter koridor bus, matikan filter spesifik rute kereta agar seimbang
+                      if (corridor !== 'all') setSelectedTrainRoute('all_train');
+                    }}
+                    className={`rounded-xl px-3 py-2 text-xs font-bold transition-all duration-300 hover:scale-[1.03] active:scale-95 ${
+                      isActive
+                        ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-orange-500/25'
+                        : 'bg-slate-950/80 text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Dinamis Filter Kereta: Muncul kalau pilih 'all' atau 'train' */}
+        {(moda === 'all' || moda === 'train') && (
+          <div className="mb-6 space-y-3 rounded-2xl bg-slate-800/30 p-4 border border-white/5 animate-fadeIn">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Rute Kereta</label>
+              <span className="rounded-lg bg-cyan-500/10 px-2 py-1 text-[11px] font-bold text-cyan-400 ring-1 ring-inset ring-cyan-500/20">
+                {selectedTrainRoute === 'all_train' ? 'Semua Rute' : selectedTrainRoute === 'T1' ? 'KA Minangkabau' : 'KA Pariaman'}
+              </span>
+            </div>
+            <div className="flex flex-col gap-2">
+              {[
+                { id: 'all_train', name: 'Semua Rute Kereta' },
+                { id: 'T1', name: 'KA Minangkabau Ekspres (Bandara)' }, 
+                { id: 'T2', name: 'KA Pariaman Ekspres' }
+              ].map((trainRoute) => {
+                const isActive = selectedTrainRoute === trainRoute.id;
+
+                return (
+                  <button
+                    key={trainRoute.id}
+                    onClick={() => {
+                      setSelectedTrainRoute(trainRoute.id);
+                      // Jika user memfilter rute kereta pas di menu 'Semua', matikan filter koridor bus
+                      if (trainRoute.id !== 'all_train') setSelectedCorridor('all');
+                    }}
+                    className={`w-full rounded-xl px-4 py-2.5 text-left text-xs font-bold transition-all duration-300 hover:scale-[1.01] active:scale-95 ${
+                      isActive
+                        ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25'
+                        : 'bg-slate-950/80 text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                    }`}
+                  >
+                    {trainRoute.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Nearby Search Section */}
         <div className="space-y-4 rounded-2xl bg-slate-800/30 p-5 border border-white/5">
@@ -242,10 +310,11 @@ export default function MapComponent() {
         {/* Helper untuk auto-center peta ketika lokasi pengguna ditemukan */}
         {userLocation && <MapUpdater center={userLocation} />}
 
-        {!loading && routesGeoJson ? <GeoJSON data={routesGeoJson} style={routeStyle} /> : null}
+        {!loading && routesGeoJson ? <GeoJSON key={JSON.stringify(routesGeoJson)} data={routesGeoJson} style={routeStyle} /> : null}
 
-        {!loading && stopsGeoJson
+        {!loading && stopsGeoJson && stopsGeoJson.features
           ? stopsGeoJson.features.map((feature) => {
+              if (!feature?.geometry?.coordinates) return null;
               const [longitude, latitude] = feature.geometry.coordinates;
 
               return (
@@ -283,6 +352,7 @@ export default function MapComponent() {
         {/* Nearby results (highlighted) */}
         {nearbyStops && nearbyStops.length > 0
           ? nearbyStops.map((feature) => {
+              if (!feature?.geometry?.coordinates) return null;
               const [lon, lat] = feature.geometry.coordinates;
               return (
                 <Marker key={`near-${feature.id}`} position={[lat, lon]}>
