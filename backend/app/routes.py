@@ -21,13 +21,15 @@ def fetch_routes_geojson() -> dict:
 
 @router.get("/api/v1/stops/geojson")
 def fetch_stops_geojson(
-    route_id: Optional[int] = Query(None, ge=1, description="Filter by corridor/route id")
+    route_id: Optional[int] = Query(None, ge=1, description="Filter by corridor/route id"),
+    moda: Optional[str] = Query("all", description="Filter by transport mode: all, bus, train")
 ) -> dict:
     """
     Fetch all stops from database as GeoJSON FeatureCollection.
+    Can filter by route_id (corridor) or moda (transport mode).
     """
     try:
-        return get_stops_geojson(route_id)
+        return get_stops_geojson(route_id, moda)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to fetch stops: {str(exc)}")
 

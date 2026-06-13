@@ -58,6 +58,7 @@ export default function MapComponent() {
         }
 
         const stopsParams = new URLSearchParams();
+        stopsParams.set('moda', moda);
         if (moda === 'bus' && selectedCorridor !== 'all') {
           stopsParams.set('route_id', selectedCorridor);
         } else if (moda === 'train' && selectedTrainRoute !== 'all_train') {
@@ -233,14 +234,14 @@ export default function MapComponent() {
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Rute Kereta</label>
               <span className="rounded-lg bg-cyan-500/10 px-2 py-1 text-[11px] font-bold text-cyan-400 ring-1 ring-inset ring-cyan-500/20">
-                {selectedTrainRoute === 'all_train' ? 'Semua Rute' : selectedTrainRoute === 'T1' ? 'KA Minangkabau' : 'KA Pariaman'}
+                {selectedTrainRoute === 'all_train' ? 'Semua Rute' : selectedTrainRoute === 8 ? 'KA Minangkabau' : 'KA Pariaman'}
               </span>
             </div>
             <div className="flex flex-col gap-2">
               {[
                 { id: 'all_train', name: 'Semua Rute Kereta' },
-                { id: 'T1', name: 'KA Minangkabau Ekspres (Bandara)' }, 
-                { id: 'T2', name: 'KA Pariaman Ekspres' }
+                { id: 8, name: 'KA Minangkabau Ekspres (Bandara)' }, 
+                { id: 9, name: 'KA Pariaman Ekspres' }
               ].map((trainRoute) => {
                 const isActive = selectedTrainRoute === trainRoute.id;
 

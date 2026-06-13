@@ -78,27 +78,22 @@ def get_routes_geojson() -> dict:
     }
 
 
-def get_stops_geojson(route_id: int | None = None) -> dict:
+def get_stops_geojson(route_id: int | None = None, moda: str = "all") -> dict:
     """
     Fetch stops from database and return as GeoJSON FeatureCollection.
+    Can filter by route_id (corridor) or moda (transport mode).
+    moda can be: "all", "bus", "train"
     """
+    # Map FE filter values to mode_id
+    mode_mapping = {
+        "bus": 1,           # TransPadang
+        "train": 2,         # Kereta Api
+    }
+    
     with get_db_connection() as connection:
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            if route_id is None:
-                query = """
-                    SELECT 
-                        s.id,
-                        s.route_id,
-                        s.stop_name,
-                        s.is_transit,
-                        r.route_name,
-                        ST_AsGeoJSON(s.geom) as geometry_json
-                    FROM stops s
-                    LEFT JOIN routes r ON s.route_id = r.id
-                    ORDER BY s.id
-                """
-                cursor.execute(query)
-            else:
+            if route_id is not None:
+                # Filter by specific route (corridor)
                 query = """
                     SELECT 
                         s.id,
@@ -113,6 +108,55 @@ def get_stops_geojson(route_id: int | None = None) -> dict:
                     ORDER BY s.id
                 """
                 cursor.execute(query, (route_id,))
+            elif moda.lower() not in ("all", ""):
+                # Filter by moda (transport mode)
+                mode_id = mode_mapping.get(moda.lower())
+                if mode_id is not None:
+                    query = """
+                        SELECT 
+                            s.id,
+                            s.route_id,
+                            s.stop_name,
+                            s.is_transit,
+                            r.route_name,
+                            ST_AsGeoJSON(s.geom) as geometry_json
+                        FROM stops s
+                        LEFT JOIN routes r ON s.route_id = r.id
+                        WHERE r.mode_id = %s
+                        ORDER BY s.id
+                    """
+                    cursor.execute(query, (mode_id,))
+                else:
+                    # Unknown moda, return empty
+                    query = """
+                        SELECT 
+                            s.id,
+                            s.route_id,
+                            s.stop_name,
+                            s.is_transit,
+                            r.route_name,
+                            ST_AsGeoJSON(s.geom) as geometry_json
+                        FROM stops s
+                        LEFT JOIN routes r ON s.route_id = r.id
+                        WHERE FALSE
+                        ORDER BY s.id
+                    """
+                    cursor.execute(query)
+            else:
+                # No filter, return all stops
+                query = """
+                    SELECT 
+                        s.id,
+                        s.route_id,
+                        s.stop_name,
+                        s.is_transit,
+                        r.route_name,
+                        ST_AsGeoJSON(s.geom) as geometry_json
+                    FROM stops s
+                    LEFT JOIN routes r ON s.route_id = r.id
+                    ORDER BY s.id
+                """
+                cursor.execute(query)
             stops = cursor.fetchall()
 
     features = []
@@ -225,6 +269,12 @@ def get_routes_filtered(moda: str = "all", route_id: int | None = None) -> dict:
     Fetch routes filtered by moda (transport mode).
     moda can be: "all", "bus", "train", or specific mode_id
     """
+    # Map FE filter values to mode_id
+    mode_mapping = {
+        "bus": 1,           # TransPadang
+        "train": 2,         # Kereta Api
+    }
+    
     with get_db_connection() as connection:
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
             if route_id is not None:
@@ -255,21 +305,37 @@ def get_routes_filtered(moda: str = "all", route_id: int | None = None) -> dict:
                 """
                 cursor.execute(query)
             else:
-                # Filter by mode name or mode_id
-                query = """
-                    SELECT 
-                        r.id,
-                        r.route_name,
-                        r.color_code,
-                        tm.mode_name,
-                        ST_AsGeoJSON(r.geom) as geometry_json
-                    FROM routes r
-                    LEFT JOIN transport_modes tm ON r.mode_id = tm.id
-                    WHERE LOWER(tm.mode_name) LIKE %s OR LOWER(r.route_name) LIKE %s
-                    ORDER BY r.id
-                """
-                search_term = f"%{moda.lower()}%"
-                cursor.execute(query, (search_term, search_term))
+                # Filter by mode_id using mapping
+                mode_id = mode_mapping.get(moda.lower())
+                if mode_id is not None:
+                    query = """
+                        SELECT 
+                            r.id,
+                            r.route_name,
+                            r.color_code,
+                            tm.mode_name,
+                            ST_AsGeoJSON(r.geom) as geometry_json
+                        FROM routes r
+                        LEFT JOIN transport_modes tm ON r.mode_id = tm.id
+                        WHERE r.mode_id = %s
+                        ORDER BY r.id
+                    """
+                    cursor.execute(query, (mode_id,))
+                else:
+                    # Fallback: return empty result if mode not found
+                    query = """
+                        SELECT 
+                            r.id,
+                            r.route_name,
+                            r.color_code,
+                            tm.mode_name,
+                            ST_AsGeoJSON(r.geom) as geometry_json
+                        FROM routes r
+                        LEFT JOIN transport_modes tm ON r.mode_id = tm.id
+                        WHERE FALSE
+                        ORDER BY r.id
+                    """
+                    cursor.execute(query)
             
             routes = cursor.fetchall()
 
