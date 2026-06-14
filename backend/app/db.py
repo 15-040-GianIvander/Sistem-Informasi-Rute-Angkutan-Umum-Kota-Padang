@@ -361,6 +361,129 @@ def get_routes_filtered(moda: str = "all", route_id: int | None = None) -> dict:
     }
 
 
+def get_route_by_id(route_id: int) -> dict | None:
+    """
+    Fetch a single route by ID and return as GeoJSON Feature.
+    """
+    with get_db_connection() as connection:
+        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
+            query = """
+                SELECT
+                    r.id,
+                    r.route_name,
+                    r.mode_id,
+                    r.color_code,
+                    tm.mode_name,
+                    ST_AsGeoJSON(r.geom) as geometry_json
+                FROM routes r
+                LEFT JOIN transport_modes tm ON r.mode_id = tm.id
+                WHERE r.id = %s
+            """
+            cursor.execute(query, (route_id,))
+            route = cursor.fetchone()
+
+    if not route:
+        return None
+
+    geom = json.loads(route["geometry_json"]) if route["geometry_json"] else None
+    return {
+        "type": "Feature",
+        "id": f"route-{route['id']}",
+        "properties": {
+            "id": route["id"],
+            "nama_armada": route["route_name"],
+            "jenis": route["mode_name"] or "Transportasi",
+            "color_code": route["color_code"] or "#000000",
+            "mode_id": route["mode_id"],
+        },
+        "geometry": geom,
+    }
+
+
+def create_route(route_name: str, mode_id: int, color_code: str | None,
+                 geometry: dict) -> dict:
+    """
+    Insert a new route into the `routes` table and return the created feature.
+    """
+    geometry_json = json.dumps(geometry)
+    with get_db_connection() as connection:
+        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
+            query = """
+                INSERT INTO routes (mode_id, route_name, color_code, geom)
+                VALUES (%s, %s, %s, ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326))
+                RETURNING id, route_name, mode_id, color_code, ST_AsGeoJSON(geom) as geometry_json;
+            """
+            cursor.execute(query, (mode_id, route_name, color_code, geometry_json))
+            route = cursor.fetchone()
+        connection.commit()
+
+    return {
+        "type": "Feature",
+        "id": f"route-{route['id']}",
+        "properties": {
+            "id": route["id"],
+            "nama_armada": route["route_name"],
+            "jenis": None,
+            "color_code": route["color_code"] or "#000000",
+            "mode_id": route["mode_id"],
+        },
+        "geometry": json.loads(route["geometry_json"]) if route["geometry_json"] else None,
+    }
+
+
+def update_route(route_id: int, route_name: str | None = None, mode_id: int | None = None,
+                 color_code: str | None = None, geometry: dict | None = None) -> bool:
+    """
+    Update an existing route record.
+    """
+    assignments = []
+    params = []
+
+    if route_name is not None:
+        assignments.append("route_name = %s")
+        params.append(route_name)
+    if mode_id is not None:
+        assignments.append("mode_id = %s")
+        params.append(mode_id)
+    if color_code is not None:
+        assignments.append("color_code = %s")
+        params.append(color_code)
+    if geometry is not None:
+        geometry_json = json.dumps(geometry)
+        assignments.append("geom = ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326)")
+        params.append(geometry_json)
+
+    if not assignments:
+        # Nothing to update, just verify that route exists
+        with get_db_connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT id FROM routes WHERE id = %s", (route_id,))
+                return cursor.fetchone() is not None
+
+    params.append(route_id)
+    query = f"UPDATE routes SET {', '.join(assignments)} WHERE id = %s RETURNING id;"
+
+    with get_db_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(query, tuple(params))
+            updated = cursor.fetchone()
+        connection.commit()
+
+    return updated is not None
+
+
+def delete_route(route_id: int) -> bool:
+    """
+    Delete a route by ID.
+    """
+    with get_db_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute("DELETE FROM routes WHERE id = %s RETURNING id;", (route_id,))
+            deleted = cursor.fetchone()
+        connection.commit()
+    return deleted is not None
+
+
 def insert_stop(nama_halte: str, latitude: float, longitude: float, fasilitas: str | None = None,
                 is_transit: bool = False, route_id: int | None = None) -> dict:
     """

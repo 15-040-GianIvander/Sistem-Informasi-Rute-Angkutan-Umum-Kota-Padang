@@ -1,8 +1,20 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 
-from .schemas import TransitStopCreate, TransitStopUpdate
-from .db import get_routes_geojson, get_stops_geojson, get_stops_nearby, get_routes_filtered, insert_stop, update_stop, delete_stop
+from .schemas import RouteCreate, RouteResponse, RouteUpdate, TransitStopCreate, TransitStopUpdate
+from .db import (
+    create_route,
+    delete_route,
+    get_route_by_id,
+    get_routes_geojson,
+    get_routes_filtered,
+    get_routes_geojson,
+    get_stops_geojson,
+    get_stops_nearby,
+    insert_stop,
+    update_route,
+    update_stop,
+)
 
 
 router = APIRouter()
@@ -115,3 +127,77 @@ def fetch_routes_filter(
         return get_routes_filtered(moda or "all", route_id)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to filter routes: {str(exc)}")
+
+
+@router.post("/api/v1/routes", response_model=RouteResponse)
+def create_route_endpoint(payload: RouteCreate) -> dict:
+    """
+    Create a new transport route and store it in PostGIS.
+    """
+    try:
+        route = create_route(
+            route_name=payload.route_name,
+            mode_id=payload.mode_id,
+            color_code=payload.color_code,
+            geometry=payload.geometry.model_dump() if hasattr(payload.geometry, "model_dump") else payload.geometry,
+        )
+        return route
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to create route: {exc}")
+
+
+@router.get("/api/v1/routes/{route_id}", response_model=RouteResponse)
+def fetch_route(route_id: int) -> dict:
+    """
+    Fetch a single route by ID.
+    """
+    try:
+        route = get_route_by_id(route_id)
+        if not route:
+            raise HTTPException(status_code=404, detail="Rute tidak ditemukan")
+        return route
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch route: {str(exc)}")
+
+
+@router.put("/api/v1/routes/{route_id}", response_model=RouteResponse)
+def update_route_endpoint(route_id: int, payload: RouteUpdate) -> dict:
+    """
+    Update an existing route.
+    """
+    try:
+        updated = update_route(
+            route_id=route_id,
+            route_name=payload.route_name,
+            mode_id=payload.mode_id,
+            color_code=payload.color_code,
+            geometry=payload.geometry.model_dump() if hasattr(payload.geometry, "model_dump") else payload.geometry,
+        )
+        if not updated:
+            raise HTTPException(status_code=404, detail="Rute tidak ditemukan")
+        route = get_route_by_id(route_id)
+        if not route:
+            raise HTTPException(status_code=404, detail="Rute tidak ditemukan setelah pembaruan")
+        return route
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to update route: {exc}")
+
+
+@router.delete("/api/v1/routes/{route_id}")
+def delete_route_endpoint(route_id: int) -> dict:
+    """
+    Delete a route by ID.
+    """
+    try:
+        success = delete_route(route_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Rute tidak ditemukan")
+        return {"status": "success", "message": f"Rute dengan ID {route_id} berhasil dihapus"}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to delete route: {exc}")
